@@ -1,6 +1,8 @@
 import streamlit as st
 import time
-from supervisor_agent import run_supervisor
+import supervisor_agent
+# ثم استدعاء الدالة بـ: supervisor_agent.run_supervisor(...)
+
 
 # إعدادات الصفحة
 st.set_page_config(
