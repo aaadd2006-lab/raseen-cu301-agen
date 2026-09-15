@@ -1,34 +1,30 @@
-# supervisor_agent.py (أول سطرين في الملف)
-from ml_model import predict_cu301_pressure
+from ml_model import predict_turbofan_status, best_params, f1_score_val
 from tools import query_pump_cost_sql, calculate_damage_cost_api, send_user_alert_api
 
-def run_supervisor(pump_number: str, pressure: float, temp: float, flow: float):
+def run_supervisor(pump_number: str, pressure: float, temp: float, vib: float, flow: float):
     logs = []
     
-    # 1. Random Forest Classification
-    pressure_label = predict_cu301_pressure(pressure, temp, flow)
-    logs.append(f"🌲 **[Random Forest Classifier]:** تحليل قراءات CU 301 ➔ الحالة: `{pressure_label}`")
+    # Step 1: KNN + GridSearchCV Prediction
+    status_label = predict_turbofan_status(pressure, temp, vib, flow)
+    logs.append(f"🔍 **[KNN Classifier & GridSearchCV]:** أفضل المعلمات `{best_params}` | F1-Score: `{f1_score_val:.2f}`")
+    logs.append(f"⚡ **[Turbofan AI Diagnosis]:** التصنيف المتوقع $\rightarrow$ `{status_label}`")
     
-    # 2. Agent 1 (Pump Cost)
-    logs.append(f"🤖 **[Agent 1 - Pump Cost Agent]:** استعلام SQL عبر Alibaba Cloud Data Lake...")
+    # Step 2: Agent 1 (Pump Cost SQL Query)
+    logs.append(f"🤖 **[Agent 1 - Pump Cost]:** استعلام SQL لـ Turbofan Asset...")
     cost_info = query_pump_cost_sql(pump_number)
-    logs.append(f"   └─ قيمة المضخة الأصلية ({cost_info['pump_name']}): **${cost_info['machine_cost_usd']:,}**")
+    logs.append(f"   └─ قيمة المحرك الأصلي: **${cost_info['machine_cost_usd']:,}**")
     
-    # 3. Agent 2 (Damage Cost)
-    logs.append(f"🤖 **[Agent 2 - Damage Cost Agent]:** حساب تكلفة الأضرار والإصلاح المتوقعة...")
-    damage_info = calculate_damage_cost_api(pump_number, pressure_label)
-    logs.append(f"   └─ مستوى الخطر: `{damage_info['risk_level']}` | التكلفة التقديرية: **${damage_info['repair_cost_usd']:,}**")
+    # Step 3: Agent 2 (Damage Cost API)
+    logs.append(f"🤖 **[Agent 2 - Damage Cost]:** حساب تكلفة التلف والإصلاح...")
+    damage_info = calculate_damage_cost_api(pump_number, status_label)
+    logs.append(f"   └─ مستوى المخاطرة: `{damage_info['risk_level']}` | تكلفة الإصلاح: **${damage_info['repair_cost_usd']:,}**")
     
-    # 4. Agent 3 (Notification)
-    logs.append(f"🤖 **[Agent 3 - Notification Agent]:** صياغة وإرسال التنبيه المفصل للمستخدم...")
-    alert_info = send_user_alert_api(
-        pump_number, pressure_label, cost_info['machine_cost_usd'], damage_info['repair_cost_usd']
-    )
-    logs.append(f"   └─ نص الإشعار المرسل:\n> {alert_info['message']}")
+    # Step 4: Agent 3 (Notification & LangChain Workflow)
+    logs.append(f"🤖 **[Agent 3 - Notification Agent (LangChain Integrator)]:** إنشاء الإشعار والتقرير...")
+    alert_info = send_user_alert_api(pump_number, status_label, cost_info['machine_cost_usd'], damage_info['repair_cost_usd'])
+    logs.append(f"   └─ الرسالة النهائية:\n> {alert_info['message']}")
     
     return {
-        "pressure_label": pressure_label,
-        "machine_cost": cost_info['machine_cost_usd'],
-        "repair_cost": damage_info['repair_cost_usd'],
+        "status_label": status_label,
         "logs": logs
     }
