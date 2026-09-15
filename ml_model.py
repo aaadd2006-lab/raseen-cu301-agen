@@ -1,25 +1,47 @@
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
 
-def train_cu301_model():
-    # Synthetic CU 301 Sensor Data: [Pressure (Bar), Temperature (°C), Flow Rate (L/min)]
-    X_train = np.array([
-        [0.2, 85, 5],    # NO_PRESSURE (Dry running)
-        [0.5, 80, 10],   # NO_PRESSURE
-        [4.5, 65, 50],   # NORMAL_PRESSURE
-        [5.0, 70, 55],   # NORMAL_PRESSURE
-        [9.5, 95, 85],   # HIGH_PRESSURE (Overpressure)
-        [10.0, 90, 90]   # HIGH_PRESSURE
-    ])
-    y_train = ['NO_PRESSURE', 'NO_PRESSURE', 'NORMAL_PRESSURE', 'NORMAL_PRESSURE', 'HIGH_PRESSURE', 'HIGH_PRESSURE']
+def train_turbofan_knn_model():
+    # Synthetic Turbofan Sensor Data (Mocking NASA Turbofan dataset structure)
+    # Features: [Sensor_1_Pressure, Sensor_2_Temp, Sensor_3_Vibration, Sensor_4_Flow]
+    np.random.seed(42)
+    n_samples = 150
+    
+    # Normal operations
+    normal_data = np.random.normal(loc=[4.5, 65, 0.2, 55], scale=[0.5, 5, 0.05, 5], size=(50, 4))
+    # Warning condition (Degradation)
+    warning_data = np.random.normal(loc=[7.0, 85, 0.6, 75], scale=[0.7, 7, 0.1, 7], size=(50, 4))
+    # Critical failure (High Pressure/Failure)
+    failure_data = np.random.normal(loc=[10.5, 105, 1.2, 95], scale=[0.8, 8, 0.15, 8], size=(50, 4))
 
-    rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf_model.fit(X_train, y_train)
-    return rf_model
+    X = np.vstack([normal_data, warning_data, failure_data])
+    y = np.array(['NORMAL'] * 50 + ['WARNING'] * 50 + ['HIGH_PRESSURE_FAILURE'] * 50)
 
-model = train_cu301_model()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-def predict_cu301_pressure(pressure: float, temp: float, flow: float) -> str:
-    """التنبؤ بحالة الضغط باستخدام Random Forest Classifier"""
-    prediction = model.predict([[pressure, temp, flow]])[0]
-    return prediction
+    # GridSearch_CV for KNN Hyperparameter Tuning
+    param_grid = {'n_neighbors': [3, 5, 7, 9], 'weights': ['uniform', 'distance']}
+    knn = KNeighborsClassifier()
+    
+    # Optimize based on F1-Score (macro)
+    grid_search = GridSearchCV(knn, param_grid, cv=3, scoring='f1_macro')
+    grid_search.fit(X_train, y_train)
+
+    best_model = grid_search.best_estimator_
+    y_pred = best_model.predict(X_test)
+    
+    best_f1 = f1_score(y_test, y_pred, average='macro')
+    cm = confusion_matrix(y_test, y_pred, labels=['NORMAL', 'WARNING', 'HIGH_PRESSURE_FAILURE'])
+
+    return best_model, grid_search.best_params_, best_f1, cm
+
+# Train model on startup
+model, best_params, f1_score_val, cm_matrix = train_turbofan_knn_model()
+
+def predict_turbofan_status(p_val, temp_val, vib_val, flow_val):
+    """Predict failure/status using tuned KNN model"""
+    pred = model.predict([[p_val, temp_val, vib_val, flow_val]])[0]
+    return pred
