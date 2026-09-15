@@ -1,10 +1,17 @@
 import sys
 import os
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# استدعاء آمن لحزم الرسم البياني لتفادي التوقف
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    HAS_PLOT_LIBS = True
+except ModuleNotFoundError:
+    HAS_PLOT_LIBS = False
+
 
 from supervisor_agent import run_supervisor
 from ml_model import best_params, f1_score_val, cm_matrix
@@ -44,10 +51,14 @@ with col_left:
 
 with col_right:
     st.subheader("📊 Confusion Matrix للنموذج")
-    fig, ax = plt.subplots(figsize=(4, 3))
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=['Normal', 'Warning', 'Failure'], 
-                yticklabels=['Normal', 'Warning', 'Failure'], ax=ax)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot(fig)
+    if HAS_PLOT_LIBS:
+        fig, ax = plt.subplots(figsize=(4, 3))
+        sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='Blues', 
+                    xticklabels=['Normal', 'Warning', 'Failure'], 
+                    yticklabels=['Normal', 'Warning', 'Failure'], ax=ax)
+        plt.ylabel('Actual')
+        plt.xlabel('Predicted')
+        st.pyplot(fig)
+    else:
+        st.warning("⚠️ جاري تثبيت حزم الرسم البياني...")
+        st.write("مصفوفة الارتباك (Raw Matrix):", cm_matrix)
