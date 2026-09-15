@@ -1,8 +1,9 @@
 import sys
 import os
 
-# إضافة المسار الحالي لضمان الوصول للملفات المجاورة
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 from ml_model import predict_turbofan_status, best_params, f1_score_val
 from tools import query_pump_cost_sql, calculate_damage_cost_api, send_user_alert_api
