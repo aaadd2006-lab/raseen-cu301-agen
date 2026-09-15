@@ -15,7 +15,12 @@ try:
 except ModuleNotFoundError:
     HAS_PLOT_LIBS = False
 
+
+# إضافة المسار الحالي لضمان عثور سحابة Streamlit على الملفات
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from supervisor_agent import run_supervisor
+
 from ml_model import best_params, f1_score_val, cm_matrix
 
 st.set_page_config(page_title="رَصِين | Turbofan Multi-Agent", page_icon="⚙️", layout="wide")
