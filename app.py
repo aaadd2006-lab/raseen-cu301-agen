@@ -2,7 +2,10 @@ import sys
 import os
 import streamlit as st
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# إضافة المسار الحالي إلى sys.path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 # استدعاء آمن لحزم الرسم البياني لتفادي التوقف
 try:
@@ -11,7 +14,6 @@ try:
     HAS_PLOT_LIBS = True
 except ModuleNotFoundError:
     HAS_PLOT_LIBS = False
-
 
 from supervisor_agent import run_supervisor
 from ml_model import best_params, f1_score_val, cm_matrix
