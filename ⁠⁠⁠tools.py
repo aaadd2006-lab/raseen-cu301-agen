@@ -19,12 +19,12 @@ def calculate_damage_cost_api(pump_number: str, pressure_status: str):
     """Agent 2 Tool: Calculate damage and repair cost"""
     pump_data = ALIBABA_CLOUD_DB.get(pump_number.upper(), ALIBABA_CLOUD_DB["PUMP-001"])
     
-    if pressure_status == "HIGH_PRESSURE":
+    if pressure_status == "HIGH_PRESSURE_FAILURE":
         multiplier = 2.5
-        risk_level = "High Pressure / Cavitation Risk"
-    elif pressure_status == "NO_PRESSURE":
-        multiplier = 1.8
-        risk_level = "Dry Running Risk"
+        risk_level = "High Pressure / Critical Turbofan Failure Risk"
+    elif pressure_status == "WARNING":
+        multiplier = 1.2
+        risk_level = "Degradation Warning State"
     else:
         multiplier = 0.0
         risk_level = "Normal Operation"
@@ -38,7 +38,7 @@ def calculate_damage_cost_api(pump_number: str, pressure_status: str):
 def send_user_alert_api(pump_number: str, pressure_status: str, machine_cost: float, repair_cost: float):
     """Agent 3 Tool: Construct alert message for user"""
     alert_msg = (
-        f"🚨 [CU 301 Alert] Pump {pump_number} Status: {pressure_status}\n"
+        f"🚨 [Turbofan Alert] Pump {pump_number} Status: {pressure_status}\n"
         f"💰 Machine Value: ${machine_cost:,.2f} | Est. Repair Cost: ${repair_cost:,.2f}\n"
         f"📍 Data Source: Alibaba Cloud IoT Data Lake"
     )
