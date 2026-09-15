@@ -1,8 +1,12 @@
+import sys
+import os
 import streamlit as st
-import time
-import supervisor_agent
-# ثم استدعاء الدالة بـ: supervisor_agent.run_supervisor(...)
 
+# إضافة المسار الحالي لضمان وصول بايثون لجميع الملفات المجاورة
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# استدعاء المشرف بعد تحديد المسار
+from supervisor_agent import run_supervisor
 
 # إعدادات الصفحة
 st.set_page_config(
@@ -40,6 +44,7 @@ st.divider()
 st.subheader("🤖 سجل تفكير المشرف والوكلاء الثلاثة (Supervisor Multi-Agent Reasoning)")
 
 if st.button("🚀 تشغيل الـ Supervisor Agent للتحليل والتنفيذ", type="primary", use_container_width=True):
+    import time
     with st.status("🧠 [Supervisor Active] جاري تنسيق المهام بين الوكلاء...", expanded=True) as status:
         result = run_supervisor(pump_num, pressure, temp, flow)
         
