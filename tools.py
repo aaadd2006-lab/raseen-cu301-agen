@@ -21,11 +21,11 @@ def calculate_rul_and_maintenance_cost_api(engine_id: str, health_status: str):
     engine_data = NASA_CMAPSS_FLEET.get(engine_id.upper(), NASA_CMAPSS_FLEET["ENGINE-001"])
     
     # حساب الـ RUL بناءً على حالة التدهور المستخرجة من الحساسات
-    if health_status == "CRITICAL_DEGRADATION":
+    if health_status in ["CRITICAL_DEGRADATION", "HIGH_PRESSURE_FAILURE"]:
         rul_cycles = max(0, engine_data["max_cycles"] - engine_data["current_cycle"] - 25)
         risk_level = "Critical Degradation (Low RUL / Imminent Failure)"
         damage_multiplier = 3.0
-    elif health_status == "WARNING_DEGRADATION":
+    elif health_status  in ["WARNING_DEGRADATION", "WARNING"]:
         rul_cycles = max(5, engine_data["max_cycles"] - engine_data["current_cycle"] - 10)
         risk_level = "Moderate Subsystem Degradation"
         damage_multiplier = 1.4
