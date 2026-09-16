@@ -26,11 +26,32 @@ except ModuleNotFoundError:
 
 
 # =========================================================
-# استدعاء Supervisor Agent
+# استدعاء Supervisor Agent 
 # =========================================================
 
-from supervisor_agent import run_supervisor
+try:
 
+    from supervisor_agent import run_supervisor
+
+except ModuleNotFoundError as e:
+
+    st.error(
+        f"❌ يوجد ملف أو مكتبة مفقودة: {e.name}"
+    )
+
+    st.error(
+        "تأكدي أن ملفات المشروع موجودة في نفس المجلد:"
+    )
+
+    st.code(
+        "app.py\n"
+        "supervisor_agent.py\n"
+        "ml_model.py\n"
+        "tools.py\n"
+        "requirements.txt"
+    )
+
+    st.stop()
 
 # =========================================================
 # استدعاء نتائج نموذج Machine Learning
