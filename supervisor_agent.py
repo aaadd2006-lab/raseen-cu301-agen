@@ -1,5 +1,10 @@
 import sys
 import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+
+load_dotenv()
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -15,6 +20,12 @@ from tools import (
 from langchain.tools import tool
 from langchain.agents import create_agent
 
+
+deepseek_model = ChatOpenAI(
+    model="deepseek-flash",
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com",
+)
 
 # ============================================================
 # LangChain Tools
