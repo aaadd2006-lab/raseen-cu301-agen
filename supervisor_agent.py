@@ -62,18 +62,58 @@ def notification_tool(
         repair_cost
     )
 
+@tool
+def engine_prediction_tool(
+    sensor_s2: float,
+    sensor_s3: float,
+    sensor_s4: float,
+    sensor_s11: float
+) -> dict:
+    """Predict the current engine health status using the ML model."""
+
+    status = predict_turbofan_status(
+        sensor_s2,
+        sensor_s3,
+        sensor_s4,
+        sensor_s11
+    )
+
+    return {
+        "health_status": status,
+        "model": "KNN"
+    }
+
 
 SUPERVISOR_SYSTEM_PROMPT = """
 You are the Supervisor Agent for the Raseen predictive maintenance system.
 
-Your responsibilities:
-1. Understand the engine health status provided by the system.
-2. Use the Fleet Registry Tool to retrieve engine information.
-3. Use the RUL Degradation Tool to calculate remaining useful life,
-   risk level, and estimated maintenance cost.
-4. Use the Notification Tool to generate the final maintenance report.
-5. Coordinate the tools in the correct order.
-6. Do not invent engine data or maintenance values.
+You are responsible for coordinating the complete predictive maintenance workflow.
+
+Follow these steps in order:
+
+1. Use the Engine Prediction Tool with the provided sensor readings
+   to determine the current engine health status.
+
+2. Use the Fleet Registry Tool with the engine ID
+   to retrieve the engine asset information and asset cost.
+
+3. Use the RUL Degradation Tool with the engine ID and the predicted
+   health status to calculate remaining useful life, risk level,
+   and estimated repair cost.
+
+4. Use the Notification Tool with the engine ID, health status,
+   asset cost, and repair cost to generate the final maintenance report.
+
+5. Do not skip any required tool.
+
+6. Do not invent engine data, health status, RUL values,
+   asset costs, repair costs, or notification results.
+
+7. Use the output of each tool as input for the next required tool.
+
+8. After all tools have been completed, provide a concise final response
+   containing the engine ID, health status, model used, RUL,
+   risk level, repair cost, and final maintenance message.
 """
 
 def build_supervisor(model):
@@ -81,12 +121,14 @@ def build_supervisor(model):
     Build the LangChain Supervisor Agent.
 
     The model is passed from outside so we can choose the LLM later.
+
     This function only builds the agent; it does not execute it.
     """
 
     supervisor = create_agent(
         model=model,
         tools=[
+            engine_prediction_tool,
             fleet_registry_tool,
             rul_degradation_tool,
             notification_tool
@@ -113,23 +155,15 @@ def run_supervisor(
     """
     Supervisor workflow.
 
-    The KNN model determines the engine health status.
-    LangChain tools provide the fleet, RUL, and notification
-    capabilities used by the supervisor architecture.
+    The LangChain Supervisor Agent coordinates the complete
+    predictive maintenance workflow.
     """
 
     logs = []
 
     # --------------------------------------------------------
-    # Step 1: KNN diagnosis
+    # Model information
     # --------------------------------------------------------
-
-    status_label = predict_turbofan_status(
-        sensor_s2,
-        sensor_s3,
-        sensor_s4,
-        sensor_s11
-    )
 
     logs.append(
         f"🔍 **[KNN Classifier & GridSearchCV]:** "
@@ -137,77 +171,63 @@ def run_supervisor(
         f"F1-Score: `{f1_score_val:.2f}`"
     )
 
-    logs.append(
-        f"⚡ **[NASA C-MAPSS Diagnosis]:** "
-        f"حالة المحرك النفاث → `{status_label}`"
-    )
-
     # --------------------------------------------------------
-    # Step 2: Fleet Registry Tool
+    # LangChain Supervisor Agent
     # --------------------------------------------------------
 
-    logs.append(
-        "🤖 **[Agent 1 - Fleet Registry]:** "
-        "استعلام بيانات المحرك النفاث من NASA C-MAPSS..."
+    supervisor = build_supervisor(deepseek_model)
+
+    agent_result = supervisor.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"""
+Analyze engine {engine_id} using the following sensor readings.
+
+Engine ID: {engine_id}
+
+Sensor S2: {sensor_s2}
+Sensor S3: {sensor_s3}
+Sensor S4: {sensor_s4}
+Sensor S11: {sensor_s11}
+
+Complete the full predictive maintenance workflow.
+
+First, use the Engine Prediction Tool to determine the engine health status.
+
+Then, use the Fleet Registry Tool to retrieve the engine asset information.
+
+Then, use the RUL Degradation Tool to calculate the remaining useful life,
+risk level, and estimated repair cost.
+
+Finally, use the Notification Tool to generate the preventive maintenance report.
+
+Use the output of each tool when calling the next tool.
+
+Do not invent any values.
+
+Return a final maintenance report containing:
+- Engine ID
+- Health Status
+- Model Used
+- RUL
+- Risk Level
+- Asset Cost
+- Repair Cost
+- Final Maintenance Message
+"""
+                }
+            ]
+        }
     )
 
-    cost_info = fleet_registry_tool.invoke({
-        "engine_id": engine_id
-    })
+    agent_response = agent_result["messages"][-1].content
 
     logs.append(
-        f"   └─ معرف المحرك: `{cost_info['engine_id']}` | "
-        f"القيمة التقديرية: "
-        f"**${cost_info['asset_cost_usd']:,}**"
-    )
-
-    # --------------------------------------------------------
-    # Step 3: RUL Degradation Tool
-    # --------------------------------------------------------
-
-    logs.append(
-        "🤖 **[Agent 2 - RUL Degradation Agent]:** "
-        "حساب العمر التشغيلي المتبقي (RUL)..."
-    )
-
-    damage_info = rul_degradation_tool.invoke({
-        "engine_id": engine_id,
-        "health_status": status_label
-    })
-
-    logs.append(
-        f"   └─ RUL المتبقي: "
-        f"**{damage_info['rul_cycles']} دورات (Cycles)** | "
-        f"حالة الخطر: `{damage_info['risk_level']}`"
-    )
-
-    logs.append(
-        f"   └─ تكلفة الصيانة المتوقعة: "
-        f"**${damage_info['repair_cost_usd']:,}**"
-    )
-
-    # --------------------------------------------------------
-    # Step 4: Notification Tool
-    # --------------------------------------------------------
-
-    logs.append(
-        "🤖 **[Agent 3 - Notification Agent]:** "
-        "إنشاء تقرير الصيانة الوقائية..."
-    )
-
-    alert_info = notification_tool.invoke({
-        "engine_id": engine_id,
-        "health_status": status_label,
-        "asset_cost": cost_info["asset_cost_usd"],
-        "repair_cost": damage_info["repair_cost_usd"]
-    })
-
-    logs.append(
-        f"   └─ التقرير النهائي:\n"
-        f"> {alert_info['message']}"
+        f"**[LangChain Supervisor]:**\n{agent_response}"
     )
 
     return {
-        "status_label": status_label,
         "logs": logs
     }
