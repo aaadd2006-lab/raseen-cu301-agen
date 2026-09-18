@@ -29,7 +29,7 @@ st.title("⚙️ منصة رَصِين | Turbofan Maintenance MAS (KNN & GridSea
 st.caption("نظام وكلاء متعددين ذكي لتتبع أداء محركات ومضخات Turbofan باستخدام KNN وLangChain")
 
 st.sidebar.header("🎛️ قراءات حساسات Turbofan Engine")
-pump_num = st.sidebar.selectbox("رقم المحرك", ["PUMP-001", "PUMP-002"])
+pump_num = st.sidebar.selectbox("رقم المحرك", ["ENGINE-001", "ENGINE-002"])
 pressure = st.sidebar.slider("الضغط (Bar)", 0.0, 15.0, 10.5)
 temp = st.sidebar.slider("الحرارة (°C)", 30, 130, 105)
 vib = st.sidebar.slider("الاهتزاز (Vibration)", 0.0, 2.0, 1.2)
